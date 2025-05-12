@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jogo da Memória com Letras</title>
+  <style>
+    :root {
+      --bg-main: #F5F7FA;
+      --card-bg: #FFFFFF;
+      --text-main: #4A4A4A;
+      --primary: #2A7FB9;
+      --accent: #2ECC71;
+      --hover-bg: #ECF0F1;
+    }
+
+    body.dark {
+      --bg-main: #1C1E26;
+      --card-bg: #2F3542;
+      --text-main: #DADFE1;
+      --primary: #3B7DD8;
+      --accent: #2ED573;
+      --hover-bg: #57606f;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    header {
+      background-color: var(--primary);
+      color: white;
+      padding: 1rem 2rem;
+      text-align: center;
+      font-size: 1.8rem;
+    }
+
+    main {
+      flex: 1;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2rem;
+    }
+
+    .controls {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .button {
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    .game-board {
+      display: grid;
+      grid-template-columns: repeat(4, 100px);
+      gap: 1rem;
+    }
+
+    .card {
+      width: 100px;
+      height: 100px;
+      background-color: var(--card-bg);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: var(--primary);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      user-select: none;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+
+    .card:not(.revealed)::after {
+      content: '?';
+      color: var(--primary);
+      font-size: 2.5rem;
+    }
+
+    .card.revealed::after {
+      content: attr(data-letter);
+    }
+
+    #timer, #moves {
+      font-size: 1.2rem;
+      margin-top: 1rem;
+    }
+
+    footer {
+      background-color: var(--hover-bg);
+      text-align: center;
+      padding: 1rem;
+      font-size: 0.9rem;
+      color: #7F8C8D;
+    }
+  </style>
+</head>
+<body>
+  <header>Jogo da Memória com Letras</header>
+
+  <main>
+    <div class="controls">
+      <button class="button" onclick="startGame()">Novo Jogo</button>
+      <button class="button" onclick="toggleDarkMode()">Modo Escuro</button>
+    </div>
+
+    <div class="game-board" id="game-board"></div>
+
+    <div id="timer">
+      Tempo decorrido: <span id="time">00:00</span>
+    </div>
+
+    <div id="moves">
+      Movimentos: <span id="move-count">0</span>
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2025 Jogo da Memória — Letras Grandes
+  </footer>
+
+  <script>
+    const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+    let firstCard = null;
+    let secondCard = null;
+    let lockBoard = false;
+    let startTime;
+    let timerInterval;
+    let moves = 0;
+    let matches = 0;
+    let timerStarted = false; // Flag para verificar se o cronômetro já foi iniciado
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark");
+    }
+
+    function startGame() {
+      const board = document.getElementById('game-board');
+      board.innerHTML = '';
+      const duplicated = [...letters, ...letters];
+      const shuffled = duplicated.sort(() => 0.5 - Math.random());
+
+      shuffled.forEach(letter => {
+        const card = document.createElement('div');
+        card.classList.add('card');
+        card.dataset.letter = letter;
+        card.addEventListener('click', handleCardClick);
+        board.appendChild(card);
+      });
+
+      [firstCard, secondCard] = [null, null];
+      lockBoard = false;
+      moves = 0;
+      matches = 0;
+      updateMoves(0);
+
+      // Reset cronômetro
+      timerStarted = false;
+      clearInterval(timerInterval);
+      document.getElementById('time').textContent = "00:00";
+    }
+
+    function updateMoves(count) {
+      document.getElementById('move-count').textContent = count;
+    }
+
+    function updateTimer() {
+      const now = Date.now();
+      const elapsed = Math.floor((now - startTime) / 1000);
+      const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
+      const seconds = String(elapsed % 60).padStart(2, '0');
+      document.getElementById('time').textContent = `${minutes}:${seconds}`;
+    }
+
+    function handleCardClick(e) {
+      if (lockBoard) return;
+      const card = e.currentTarget;
+      if (card.classList.contains('revealed')) return;
+
+      // Inicia o cronômetro quando a primeira carta for virada
+      if (!timerStarted) {
+        startTime = Date.now();
+        timerInterval = setInterval(updateTimer, 1000);
+        timerStarted = true;
+      }
+
+      card.classList.add('revealed');
+
+      if (!firstCard) {
+        firstCard = card;
+      } else {
+        secondCard = card;
+        moves++;
+        updateMoves(moves);
+        checkMatch();
+      }
+    }
+
+    function checkMatch() {
+      const isMatch = firstCard.dataset.letter === secondCard.dataset.letter;
+      if (isMatch) {
+        matches++;
+        resetTurn();
+        if (matches === letters.length) {
+          clearInterval(timerInterval); // parar cronômetro
+        }
+      } else {
+        lockBoard = true;
+        setTimeout(() => {
+          firstCard.classList.remove('revealed');
+          secondCard.classList.remove('revealed');
+          resetTurn();
+        }, 800);
+      }
+    }
+
+    function resetTurn() {
+      [firstCard, secondCard] = [null, null];
+      lockBoard = false;
+    }
+
+    // Inicia o jogo automaticamente ao carregar
+    startGame();
+  </script>
+</body>
+</html>
