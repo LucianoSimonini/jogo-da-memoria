@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Jogo da Memória com Letras</title>
+  <title>Jogo da Memória</title>
   <style>
     :root {
       --bg-main: #F5F7FA;
@@ -98,7 +98,7 @@
     }
 
     .card.revealed::after {
-      content: attr(data-letter);
+      content: attr(data-content);
     }
 
     #timer, #moves {
@@ -116,12 +116,16 @@
   </style>
 </head>
 <body>
-  <header>Jogo da Memória com Letras</header>
+  <header>Jogo da Memória</header>
 
   <main>
     <div class="controls">
       <button class="button" onclick="startGame()">Novo Jogo</button>
       <button class="button" onclick="toggleDarkMode()">Modo Escuro</button>
+      <select class="button" id="game-type" onchange="startGame()">
+        <option value="letters">Letras</option>
+        <option value="words">Palavras</option>
+      </select>
     </div>
 
     <div class="game-board" id="game-board"></div>
@@ -136,11 +140,12 @@
   </main>
 
   <footer>
-    &copy; 2025 Jogo da Memória — Letras Grandes
+    &copy; 2025 Jogo da Memória
   </footer>
 
   <script>
     const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+    const words = ['Casa', 'Pato', 'Rato', 'Gato', 'Bola', 'Fogo', 'Sol', 'Lua'];
     let firstCard = null;
     let secondCard = null;
     let lockBoard = false;
@@ -156,14 +161,17 @@
 
     function startGame() {
       const board = document.getElementById('game-board');
+      const gameType = document.getElementById('game-type').value;
+      const items = gameType === 'letters' ? letters : words;
+      
       board.innerHTML = '';
-      const duplicated = [...letters, ...letters];
+      const duplicated = [...items, ...items];
       const shuffled = duplicated.sort(() => 0.5 - Math.random());
 
-      shuffled.forEach(letter => {
+      shuffled.forEach(item => {
         const card = document.createElement('div');
         card.classList.add('card');
-        card.dataset.letter = letter;
+        card.dataset.content = item;
         card.addEventListener('click', handleCardClick);
         board.appendChild(card);
       });
@@ -217,7 +225,7 @@
     }
 
     function checkMatch() {
-      const isMatch = firstCard.dataset.letter === secondCard.dataset.letter;
+      const isMatch = firstCard.dataset.content === secondCard.dataset.content;
       if (isMatch) {
         matches++;
         resetTurn();
